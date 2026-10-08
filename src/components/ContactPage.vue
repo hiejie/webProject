@@ -12,6 +12,14 @@
               <button type="button" class="close" @click="submitted = false">&times;</button>
             </div>
 
+            <div
+              v-if="errorMessage"
+              class="alert alert-danger"
+              role="alert"
+            >
+              {{ errorMessage }}
+            </div>
+
             <form @submit.prevent="handleSubmit">
               <div class="form-group mb-3">
                 <label class="font-weight-bold small">Full Name</label>
@@ -37,8 +45,12 @@
                 <textarea class="form-control" rows="4" v-model="form.message" placeholder="Type your message here..." required></textarea>
               </div>
 
-              <button type="submit" class="btn btn-primary font-weight-bold px-4">
-                Submit Inquiry
+              <button
+                type="submit"
+                class="btn btn-primary font-weight-bold px-4"
+                :disabled="loading"
+              >
+                {{ loading ? 'Sending...' : 'Submit Inquiry' }}
               </button>
             </form>
           </div>
@@ -82,12 +94,17 @@
   </div>
 </template>
 
+
 <script>
 export default {
   name: 'ContactPage',
+
   data () {
     return {
       submitted: false,
+      loading: false,
+      errorMessage: '',
+
       form: {
         name: '',
         email: '',
@@ -96,14 +113,53 @@ export default {
       }
     }
   },
+
   methods: {
-    handleSubmit () {
-      this.submitted = true
-      // Form submitted state handled
+    async handleSubmit () {
+      this.submitted = false
+      this.errorMessage = ''
+      this.loading = true
+
+      try {
+        const response = await fetch(
+          'http://localhost:5000/api/contact',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(this.form)
+          }
+        )
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || 'Failed to submit your message.'
+          )
+        }
+
+        this.submitted = true
+
+        // Reset the form after a successful submission
+        this.form = {
+          name: '',
+          email: '',
+          subject: 'Lab Question',
+          message: ''
+        }
+      } catch (error) {
+        this.errorMessage =
+          error.message || 'Unable to connect to the backend.'
+      } finally {
+        this.loading = false
+      }
     }
   }
 }
 </script>
+
 
 <style scoped>
 .contact {
